@@ -1,16 +1,60 @@
-#include <stdio.h>
 #include <pkg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ONAME "orphans"
 #define OVERS "0.1"
-#define ODESC "find orphaned packages"
+#define ODESC "Find orphaned packages"
+
+static void usage(void)
+{
+    fprintf(stderr, "Usage: pkg orphans [-U]\n"
+	    "\t\t-U\tskip updating repositories\n");
+}
 
 static int orphans(int argc, char **argv)
 {
-    struct pkgdb *db = 0;
+    if (argc > 2)
+    {
+	usage();
+	return EXIT_FAILURE;
+    }
+    int doupdate = 1;
+    if (argc == 2)
+    {
+	if (strcmp(argv[1], "-U"))
+	{
+	    usage();
+	    return EXIT_FAILURE;
+	}
+	doupdate = 0;
+    }
+
+    if (pkgdb_access(PKGDB_MODE_READ|PKGDB_MODE_WRITE|PKGDB_MODE_CREATE,
+		PKGDB_DB_REPO) == EPKG_ENOACCESS)
+    {
+	doupdate = 0;
+    }
+
+    if (doupdate)
+    {
+	if (pkg_repos_total_count() == 0) return EPKG_OK;
+
+	struct pkg_repo *r = 0;
+	while (pkg_repos(&r) == EPKG_OK)
+	{
+	    if (pkg_repo_enabled(r))
+	    {
+		fprintf(stderr, "Updating %s repository catalogue...\n",
+			pkg_repo_name(r));
+		pkg_update(r, 0);
+	    }
+	}
+    }
 
     int rc = EPKG_OK;
-
+    struct pkgdb *db = 0;
     if (pkgdb_open_all(&db, PKGDB_REMOTE, 0) < 0)
     {
 	fprintf(stderr, "Cannot open database.");
