@@ -32,15 +32,14 @@ static int orphans(int argc, char **argv)
     }
 
     if (pkgdb_access(PKGDB_MODE_READ|PKGDB_MODE_WRITE|PKGDB_MODE_CREATE,
-		PKGDB_DB_REPO) == EPKG_ENOACCESS)
+		PKGDB_DB_REPO) == EPKG_ENOACCESS ||
+	    pkg_repos_total_count() == 0)
     {
 	doupdate = 0;
     }
 
     if (doupdate)
     {
-	if (pkg_repos_total_count() == 0) return EPKG_OK;
-
 	struct pkg_repo *r = 0;
 	while (pkg_repos(&r) == EPKG_OK)
 	{
